@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Garden AI Assistant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap');
+
+  :root {
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #085041;
+    --teal: #0F6E56;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --purple: #534AB7;
+    --purple-light: #EEEDFE;
+    --gray: #5F5E5A;
+    --gray-light: #F1EFE8;
+    --bg: #f7f9f7;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.09);
+    --text: #1a1a18;
+    --text-muted: #5F5E5A;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-icon {
+    width: 38px; height: 38px;
+    background: var(--green-light);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header-title { font-size: 15px; font-weight: 600; color: var(--green-dark); }
+  .header-sub { font-size: 12px; color: var(--text-muted); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #1D9E75;
+    margin-left: auto;
+    box-shadow: 0 0 0 3px rgba(29,158,117,0.2);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(29,158,117,0.2)} 50%{box-shadow:0 0 0 6px rgba(29,158,117,0.1)} }
+
+  /* ── Sensor Bar ── */
+  .sensor-bar {
+    background: var(--surface);
+    padding: 12px 16px;
+    border-bottom: 0.5px solid var(--border);
+    overflow-x: auto;
+    display: flex;
+    gap: 10px;
+    scrollbar-width: none;
+  }
+  .sensor-bar::-webkit-scrollbar { display: none; }
+  .sensor-chip {
+    flex-shrink: 0;
+    display: flex; align-items: center; gap: 6px;
+    background: var(--gray-light);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .sensor-chip:hover { border-color: var(--green); }
+  .sensor-chip.warn { background: var(--amber-light); color: var(--amber); }
+  .sensor-chip.danger { background: var(--red-light); color: var(--red); }
+  .sensor-chip.good { background: var(--green-light); color: var(--teal); }
+  .chip-icon { font-size: 14px; }
+
+  /* ── Messages ── */
+  .messages {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    max-height: calc(100vh - 260px);
+  }
+
+  .msg-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .msg-row.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .avatar.ai { background: var(--green-light); }
+  .avatar.user { background: var(--blue-light); }
+
+  .bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.55;
+    border: 0.5px solid var(--border);
+  }
+  .bubble.ai {
+    background: var(--surface);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.user {
+    background: var(--green-dark);
+    color: #fff;
+    border-color: transparent;
+    border-bottom-right-radius: 4px;
+  }
+
+  /* Alert bubble */
+  .bubble.alert-warn {
+    background: var(--amber-light);
+    border-color: rgba(186,117,23,0.25);
+  }
+  .bubble.alert-danger {
+    background: var(--red-light);
+    border-color: rgba(163,45,45,0.25);
+  }
+
+  .bubble-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+    font-weight: 500;
+  }
+
+  /* Quick suggestions */
+  .suggestions {
+    padding: 8px 16px 4px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .suggest-btn {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 400;
+  }
+  .suggest-btn:hover { background: var(--green-light); border-color: var(--green); color: var(--teal); }
+
+  /* ── Input area ── */
+  .input-area {
+    background: var(--surface);
+    border-top: 0.5px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .input-box {
+    flex: 1;
+    background: var(--gray-light);
+    border: 1px solid transparent;
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    min-height: 42px;
+    max-height: 120px;
+    line-height: 1.4;
+    transition: border-color 0.15s;
+    color: var(--text);
+  }
+  .input-box:focus { border-color: var(--green); background: var(--surface); }
+  .input-box::placeholder { color: var(--text-muted); }
+
+  .send-btn {
+    width: 42px; height: 42px;
+    background: var(--green);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s, background 0.15s;
+    color: white;
+    font-size: 18px;
+  }
+  .send-btn:hover { background: var(--teal); transform: scale(1.05); }
+  .send-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+  /* Typing indicator */
+  .typing { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+  /* Action card */
+  .action-card {
+    margin-top: 8px;
+    background: var(--green-light);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-left: 3px solid var(--green);
+  }
+  .action-card b { color: var(--green-dark); }
+
+  /* Sensor detail popup */
+  .sensor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .sensor-card {
+    background: var(--gray-light);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .sensor-card .val { font-size: 18px; font-weight: 600; margin-top: 2px; }
+  .sensor-card .val.good { color: var(--green); }
+  .sensor-card .val.warn { color: var(--amber); }
+  .sensor-card .val.danger { color: var(--red); }
+
+  .timestamp {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-icon">🌱</div>
+  <div>
+    <div class="header-title">Smart Garden AI</div>
+    <div class="header-sub">Trợ lý chăm sóc vườn thông minh</div>
+  </div>
+  <div class="status-dot" title="AI đang hoạt động"></div>
+</div>
+
+<!-- Sensor live bar -->
+<div class="sensor-bar" id="sensorBar">
+  <div class="sensor-chip good" onclick="askSensor('temperature')">
+    <span class="chip-icon">🌡️</span><span id="chip-temp">28.5°C</span>
+  </div>
+  <div class="sensor-chip good" onclick="askSensor('humidity')">
+    <span class="chip-icon">💧</span><span id="chip-hum">65%</span>
+  </div>
+  <div class="sensor-chip warn" onclick="askSensor('soil')">
+    <span class="chip-icon">🌍</span><span id="chip-soil">28%</span>
+  </div>
+  <div class="sensor-chip good" onclick="askSensor('light')">
+    <span class="chip-icon">☀️</span><span id="chip-light">72%</span>
+  </div>
+  <div class="sensor-chip danger" onclick="askSensor('water')">
+    <span class="chip-icon">🪣</span><span id="chip-water">15%</span>
+  </div>
+  <div class="sensor-chip good" onclick="askSensor('pump')">
+    <span class="chip-icon">⚙️</span><span>Bơm: TẮT</span>
+  </div>
+</div>
+
+<!-- Messages -->
+<div class="messages" id="messages">
+  <div class="timestamp">Hôm nay, 10:30</div>
+
+  <!-- Welcome message -->
+  <div class="msg-row">
+    <div class="avatar ai">🌱</div>
+    <div>
+      <div class="bubble-label">Smart Garden AI</div>
+      <div class="bubble ai">
+        Xin chào! Tôi là trợ lý AI cho vườn thông minh của bạn.<br><br>
+        Tôi đang nhận dữ liệu trực tiếp từ ESP32 qua MQTT. Hiện tại tôi phát hiện một số điểm cần chú ý:
+        <div class="action-card">
+          ⚠️ <b>Đất khá khô</b> (28%) — nên tưới thêm<br>
+          🪣 <b>Bình nước sắp hết</b> (15%) — cần bổ sung
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Quick suggestions -->
+<div class="suggestions" id="suggestions">
+  <button class="suggest-btn" onclick="sendSuggestion('Phân tích tình trạng vườn hiện tại')">📊 Phân tích vườn</button>
+  <button class="suggest-btn" onclick="sendSuggestion('Nên tưới nước lúc nào là tốt nhất?')">🕐 Lịch tưới tối ưu</button>
+  <button class="suggest-btn" onclick="sendSuggestion('Nhiệt độ hiện tại có ảnh hưởng đến cây không?')">🌡️ Tư vấn nhiệt độ</button>
+  <button class="suggest-btn" onclick="sendSuggestion('Hướng dẫn cài đặt chế độ tự động')">⚙️ Chế độ tự động</button>
+</div>
+
+<!-- Input -->
+<div class="input-area">
+  <textarea
+    class="input-box"
+    id="userInput"
+    placeholder="Hỏi về vườn của bạn..."
+    rows="1"
+    onkeydown="handleKey(event)"
+    oninput="autoResize(this)"
+  ></textarea>
+  <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+</div>
+
+<script>
+// ── Sensor data (cập nhật từ MQTT qua Android WebView interface) ──
+let sensorData = {
+  temperature: 28.5,
+  humidity: 65,
+  soilMoisture: 28,
+  lightLevel: 72,
+  waterLevel: 15,
+  pump: false,
+  fan: false,
+  autoMode: false,
+  servoAngle: 0,
+  lastUpdate: new Date().toLocaleTimeString('vi-VN')
+};
+
+// Conversation history for multi-turn
+let conversationHistory = [];
+
+// ── Android → JS bridge: nhận dữ liệu từ app ──
+// Gọi hàm này từ Android: webView.evaluateJavascript("updateSensorData(JSON.stringify(data))", null)
+function updateSensorData(jsonStr) {
+  try {
+    const data = JSON.parse(jsonStr);
+    sensorData = { ...sensorData, ...data };
+    updateSensorChips();
+    checkAutoAlert();
+  } catch(e) { console.error('Sensor parse error:', e); }
+}
+
+function updateSensorChips() {
+  document.getElementById('chip-temp').textContent = sensorData.temperature + '°C';
+  document.getElementById('chip-hum').textContent = sensorData.humidity + '%';
+  document.getElementById('chip-soil').textContent = sensorData.soilMoisture + '%';
+  document.getElementById('chip-light').textContent = sensorData.lightLevel + '%';
+  document.getElementById('chip-water').textContent = sensorData.waterLevel + '%';
+
+  // Update chip colors
+  const chips = document.querySelectorAll('.sensor-chip');
+  chips[0].className = 'sensor-chip ' + (sensorData.temperature > 35 ? 'danger' : sensorData.temperature > 30 ? 'warn' : 'good');
+  chips[1].className = 'sensor-chip ' + (sensorData.humidity < 40 ? 'warn' : 'good');
+  chips[2].className = 'sensor-chip ' + (sensorData.soilMoisture < 30 ? 'danger' : sensorData.soilMoisture < 50 ? 'warn' : 'good');
+  chips[3].className = 'sensor-chip good';
+  chips[4].className = 'sensor-chip ' + (sensorData.waterLevel < 20 ? 'danger' : sensorData.waterLevel < 40 ? 'warn' : 'good');
+}
+
+// Auto alert when sensors hit critical
+function checkAutoAlert() {
+  if (sensorData.waterLevel < 10) {
+    addMessage('ai', '🚨 **Cảnh báo khẩn!** Bình nước chỉ còn ' + sensorData.waterLevel + '%. Hãy bổ sung nước ngay để tránh cây bị thiếu nước nghiêm trọng!', 'alert-danger');
+  }
+}
+
+// ── Quick sensor questions ──
+function askSensor(type) {
+  const questions = {
+    temperature: `Nhiệt độ hiện tại là ${sensorData.temperature}°C. Điều này có ảnh hưởng gì đến cây không?`,
+    humidity: `Độ ẩm không khí ${sensorData.humidity}%. Tôi có cần bật quạt không?`,
+    soil: `Độ ẩm đất đang là ${sensorData.soilMoisture}%. Tôi có nên tưới ngay không?`,
+    light: `Ánh sáng ${sensorData.lightLevel}%. Mái che có cần điều chỉnh không?`,
+    water: `Bình nước còn ${sensorData.waterLevel}%. Tôi phải xử lý thế nào?`,
+    pump: `Khi nào nên bật bơm nước? Hướng dẫn cài đặt lịch tưới tự động.`
+  };
+  sendSuggestion(questions[type]);
+}
+
+// ── Build system prompt với dữ liệu cảm biến thực ──
+function buildSystemPrompt() {
+  return `Bạn là trợ lý AI thông minh cho hệ thống vườn thông minh (Smart Garden) kết nối ESP32 qua MQTT.
+
+DỮ LIỆU CẢM BIẾN HIỆN TẠI (cập nhật lúc ${sensorData.lastUpdate}):
+- 🌡️ Nhiệt độ: ${sensorData.temperature}°C
+- 💧 Độ ẩm không khí: ${sensorData.humidity}%  
+- 🌍 Độ ẩm đất: ${sensorData.soilMoisture}% ${sensorData.soilMoisture < 30 ? '(THẤP - cần tưới!)' : sensorData.soilMoisture < 50 ? '(trung bình)' : '(tốt)'}
+- ☀️ Ánh sáng: ${sensorData.lightLevel}%
+- 🪣 Mực nước bình: ${sensorData.waterLevel}% ${sensorData.waterLevel < 20 ? '(SẮP HẾT - nguy hiểm!)' : ''}
+- ⚙️ Bơm nước: ${sensorData.pump ? 'ĐANG BẬT' : 'TẮT'}
+- 🌀 Quạt: ${sensorData.fan ? 'ĐANG BẬT' : 'TẮT'}
+- 🔄 Chế độ tự động: ${sensorData.autoMode ? 'BẬT' : 'TẮT'}
+- 🏗️ Mái che (servo): ${sensorData.servoAngle}°
+
+HỆ THỐNG ĐIỀU KHIỂN:
+- App Android giao tiếp ESP32 qua MQTT broker (HiveMQ public)
+- Các topic: garden/esp32/pump, garden/esp32/fan, garden/esp32/servo, garden/esp32/automode
+- ESP32-CAM stream tại http://192.168.1.100/capture
+
+QUY TẮC TRẢ LỜI:
+1. Trả lời NGẮN GỌN, dùng tiếng Việt tự nhiên
+2. Dựa trên dữ liệu thực tế ở trên, không phỏng đoán
+3. Khi đề xuất hành động, nêu RÕ lệnh MQTT cần gửi (ví dụ: gửi "ON" đến topic garden/esp32/pump)
+4. Nếu tình trạng KHẨN CẤP, nêu bật rõ và đề xuất hành động ngay
+5. Cuối câu trả lời nếu có thể, gợi ý 1-2 câu hỏi tiếp theo người dùng có thể hỏi`;
+}
+
+// ── Send message ──
+async function sendMessage(overrideText) {
+  const input = document.getElementById('userInput');
+  const text = overrideText || input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+  hideSuggestions();
+
+  // Add user bubble
+  addMessage('user', text);
+
+  // Add to history
+  conversationHistory.push({ role: 'user', content: text });
+
+  // Show typing
+  const typingId = showTyping();
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: buildSystemPrompt(),
+        messages: conversationHistory.slice(-8) // giữ 8 tin nhắn gần nhất
+      })
+    });
+
+    removeTyping(typingId);
+
+    const data = await response.json();
+    const aiText = data.content?.[0]?.text || 'Xin lỗi, tôi không thể phản hồi lúc này.';
+
+    // Add to history
+    conversationHistory.push({ role: 'assistant', content: aiText });
+
+    addMessage('ai', aiText);
+
+    // Show new suggestions based on context
+    showContextSuggestions(text);
+
+  } catch(err) {
+    removeTyping(typingId);
+    addMessage('ai', '⚠️ Lỗi kết nối API. Vui lòng kiểm tra kết nối mạng và thử lại.', 'alert-warn');
+    console.error(err);
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function sendSuggestion(text) {
+  sendMessage(text);
+}
+
+// ── UI helpers ──
+function addMessage(role, text, extraClass = '') {
+  const msgs = document.getElementById('messages');
+
+  const row = document.createElement('div');
+  row.className = 'msg-row' + (role === 'user' ? ' user' : '');
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar ' + role;
+  avatar.textContent = role === 'ai' ? '🌱' : '👤';
+
+  const inner = document.createElement('div');
+
+  if (role === 'ai') {
+    const label = document.createElement('div');
+    label.className = 'bubble-label';
+    label.textContent = 'Smart Garden AI';
+    inner.appendChild(label);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble ' + role + (extraClass ? ' ' + extraClass : '');
+  bubble.innerHTML = formatText(text);
+
+  inner.appendChild(bubble);
+  row.appendChild(avatar);
+  row.appendChild(inner);
+  msgs.appendChild(row);
+
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function formatText(text) {
+  // Basic markdown-ish formatting
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code style="background:rgba(0,0,0,0.07);padding:1px 5px;border-radius:4px;font-size:13px">$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const id = 'typing-' + Date.now();
+
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+  row.id = id;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar ai';
+  avatar.textContent = '🌱';
+
+  const inner = document.createElement('div');
+  const label = document.createElement('div');
+  label.className = 'bubble-label';
+  label.textContent = 'Smart Garden AI';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble ai';
+  bubble.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+
+  inner.appendChild(label);
+  inner.appendChild(bubble);
+  row.appendChild(avatar);
+  row.appendChild(inner);
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+
+function removeTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function hideSuggestions() {
+  document.getElementById('suggestions').style.display = 'none';
+}
+
+function showContextSuggestions(lastQuestion) {
+  const suggestions = document.getElementById('suggestions');
+  suggestions.style.display = 'flex';
+
+  let btns = [];
+  if (lastQuestion.includes('tưới') || lastQuestion.includes('đất')) {
+    btns = ['Bật bơm ngay bây giờ được không?', 'Cài lịch tưới tự động thế nào?', 'Tưới bao nhiêu phút là đủ?'];
+  } else if (lastQuestion.includes('nhiệt') || lastQuestion.includes('quạt')) {
+    btns = ['Nhiệt độ bao nhiêu thì cần bật quạt?', 'Điều chỉnh mái che giảm nhiệt được không?'];
+  } else {
+    btns = ['📊 Phân tích toàn bộ vườn', '🕐 Gợi ý lịch chăm sóc hôm nay', '⚙️ Tối ưu chế độ tự động'];
+  }
+
+  suggestions.innerHTML = btns.map(b =>
+    `<button class="suggest-btn" onclick="sendSuggestion('${b}')">${b}</button>`
+  ).join('');
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── Android bridge: JS → Android ──
+// Để Android lắng nghe lệnh từ AI, override hàm này:
+// window.SmartGardenBridge = { sendMqttCommand: function(topic, payload) { ... } }
+function sendToDevice(topic, payload) {
+  if (window.SmartGardenBridge) {
+    window.SmartGardenBridge.sendMqttCommand(topic, payload);
+  } else {
+    console.log('MQTT Command:', topic, '->', payload);
+  }
+}
+
+// Simulate live sensor update every 30s (thay bằng MQTT real-time trong production)
+setInterval(() => {
+  sensorData.lastUpdate = new Date().toLocaleTimeString('vi-VN');
+}, 30000);
+</script>
+
+<!-- ── Integration Guide (ẩn, dành cho developer) ──
+  TÍCH HỢP VÀO ANDROID:
+
+  1. Thêm WebView vào layout XML:
+     <WebView android:id="@+id/webViewChat" ... />
+
+  2. Setup WebView trong Java:
+     webView.getSettings().setJavaScriptEnabled(true);
+     webView.loadUrl("file:///android_asset/smart_garden_ai_chat.html");
+     // Hoặc host trên server: webView.loadUrl("https://yourserver.com/chat");
+
+  3. Gửi dữ liệu cảm biến từ MQTT vào WebView:
+     // Trong handleIncomingMessage() của MainActivity.java, thêm:
+     String js = "updateSensorData('" + payload + "')";
+     webView.post(() -> webView.evaluateJavascript(js, null));
+
+  4. Nhận lệnh từ AI (JavaScript → Android):
+     webView.addJavascriptInterface(new Object() {
+       @JavascriptInterface
+       public void sendMqttCommand(String topic, String payload) {
+         publishMessage(topic, payload); // gọi hàm MQTT hiện có
+       }
+     }, "SmartGardenBridge");
+
+  5. API Key: Cần thêm vào server proxy để bảo mật.
+     KHÔNG nhúng API key trực tiếp vào HTML trong production!
+-->
+</body>
+</html>
